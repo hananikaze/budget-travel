@@ -92,7 +92,28 @@ Plan cost-effective travel itineraries for mainland China with a focus on trains
    - If NO bikes available → **Highlight this clearly** and suggest bus/walking alternatives
    
    **检测方法**（优先级从高到低）：
-   1. **实时 API 查询**（推荐，需要高德地图 API key）:
+   1. **小红书实地验证** ⭐ 最高优先级（2026年新增）
+      - **为什么小红书优先**：
+        - 本地用户真实反馈（最近几天/几周的实际体验）
+        - 能发现数据库/API 不知道的细节（如某品牌撤出、限制区域等）
+        - 能验证"官方声称有"vs"实际能不能扫到车"
+      - **使用方法**：
+        ```bash
+        # 登录小红书后搜索
+        cd ~/.openclaw/skills/xiaohongshu-skills
+        uv run python scripts/cli.py search-feeds --keyword "城市名 共享单车 美团 哈啰 青桔" --sort-by "最新" --note-type "图文"
+        ```
+      - **分析要点**：
+        - 用户提到哪些品牌？（美团/哈啰/青桔/本地公共自行车）
+        - 是否有"找不到车"/"这个城市没有XX品牌"的反馈？
+        - 评论区是否有纠正/补充信息？
+      - **特殊案例**：
+        - **杭州**：小红书显示主力是"杭州小红车"（有桩公共自行车），御三家基本无存在感（2026-03验证）
+      - **权重规则**：
+        - 如果小红书和数据库/API冲突 → **优先相信小红书**
+        - 如果小红书无相关内容 → 降级使用 API/数据库
+   
+   2. **实时 API 查询**（推荐，需要高德地图 API key）:
       ```bash
       python3 scripts/check_bike_realtime.py 城市名
       ```
@@ -100,16 +121,16 @@ Plan cost-effective travel itineraries for mainland China with a focus on trains
       - 缺点：需要配置 API key（参考 `references/api_config.md`）
       - 自动回退：如果无 API key，自动使用静态数据库
    
-   2. **静态数据库**（默认，无需配置）:
+   3. **静态数据库**（默认，无需配置）:
       ```bash
       python3 scripts/check_bike_sharing.py 城市名
       ```
       - 优点：离线可用，常见城市准确
-      - 缺点：冷门城市可能未收录
+      - 缺点：冷门城市可能未收录，数据可能过时
    
-   3. **查阅文档**: `references/bike_sharing_data.md`（50+ 城市数据）
+   4. **查阅文档**: `references/bike_sharing_data.md`（50+ 城市数据）
    
-   **提示用户**：无论使用哪种方法，都建议到站后再次确认（打开美团/哈啰/青桔 APP）
+   **提示用户**：无论使用哪种方法，都建议到站后再次确认（打开美团/哈啰/青桔 APP 或当地公共自行车小程序）
 
 2. **Find Train Routes** 🚂
    - Long-distance: ONLY trains (普快/快车/高铁/动车)
