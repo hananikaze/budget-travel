@@ -85,52 +85,53 @@ Plan cost-effective travel itineraries for mainland China with a focus on trains
 ### Planning Mode Steps
 
 1. **Check Bike Sharing Availability** 🚲
-   - CRITICAL: Always check if destination has shared bikes (human-powered, not e-bikes)
-   - Priority order:
-     - Local government public bikes (杭州小红车, 武汉公共自行车, etc.)
-     - "御三家" corporate bikes: 美团🟡 / 哈啰🔵 / 青桔🟢
-   - If NO bikes available → **Highlight this clearly** and suggest bus/walking alternatives
+   - CRITICAL: Always check shared bikes; distinguish 🚲人力自行车 vs ⚡电助力自行车
+   - 检测目标:
+     - **御三家**: 美团🟡 / 哈啰🔵 / 青桔🟢
+     - **政府公共自行车**: 杭州小红车、苏州好行、武汉公共自行车等
+   - If NO pedal bikes → **Highlight clearly** and suggest bus/walking
    
-   **检测方法**（优先级从高到低）：
-   1. **小红书实地验证** ⭐ 最高优先级（2026年新增）
-      - **为什么小红书优先**：
-        - 本地用户真实反馈（最近几天/几周的实际体验）
-        - 能发现数据库/API 不知道的细节（如某品牌撤出、限制区域等）
-        - 能验证"官方声称有"vs"实际能不能扫到车"
-      - **使用方法**：
-        ```bash
-        # 登录小红书后搜索
-        cd ~/.openclaw/skills/xiaohongshu-skills
-        uv run python scripts/cli.py search-feeds --keyword "城市名 共享单车 美团 哈啰 青桔" --sort-by "最新" --note-type "图文"
-        ```
-      - **分析要点**：
-        - 用户提到哪些品牌？（美团/哈啰/青桔/本地公共自行车）
-        - 是否有"找不到车"/"这个城市没有XX品牌"的反馈？
-        - 评论区是否有纠正/补充信息？
-      - **特殊案例**：
-        - **杭州**：小红书显示主力是"杭州小红车"（有桩公共自行车），御三家基本无存在感（2026-03验证）
-      - **权重规则**：
-        - 如果小红书和数据库/API冲突 → **优先相信小红书**
-        - 如果小红书无相关内容 → 降级使用 API/数据库
+   **检测方法: 交叉验证（Exa + 小红书）** ⭐
    
-   2. **实时 API 查询**（推荐，需要高德地图 API key）:
-      ```bash
-      python3 scripts/check_bike_realtime.py 城市名
-      ```
-      - 优点：覆盖全国所有城市，数据实时
-      - 缺点：需要配置 API key（参考 `references/api_config.md`）
-      - 自动回退：如果无 API key，自动使用静态数据库
+   运行一条命令即可完成双信源交叉验证：
+   ```bash
+   python3 scripts/check_bike_sharing.py 城市名
+   # JSON 输出: python3 scripts/check_bike_sharing.py 城市名 --json
+   ```
    
-   3. **静态数据库**（默认，无需配置）:
-      ```bash
-      python3 scripts/check_bike_sharing.py 城市名
-      ```
-      - 优点：离线可用，常见城市准确
-      - 缺点：冷门城市可能未收录，数据可能过时
+   脚本自动完成:
+   1. **Exa 全网搜索** — 搜索"城市 共享单车"和"城市 公共自行车"
+   2. **小红书实地反馈** — 搜索本地用户最新体验帖
+   3. **交叉分析** — 综合两个信源，输出:
+      - 御三家各品牌是否存在 + 车辆类型（人力/电助力）
+      - 政府公共自行车是否存在 + 运营状况
+      - 政府车的**外地注册便利性**（是否支持扫码、需否办卡/押金）
+      - 政府车的**车辆维护评价**（用户反馈好/差）
+      - 穷游出行建议
    
-   4. **查阅文档**: `references/bike_sharing_data.md`（50+ 城市数据）
+   **输出示例**:
+   ```
+   🟡 美团: ✅ 已检测到 | 车辆类型: ⚡ 电助力 | 置信度: 高
+   🔵 哈啰: ✅ 已检测到 | 车辆类型: 🚲 人力 + ⚡ 电助力 | 置信度: 高
+   政府公共自行车: 苏州好行 | 🚲 人力
+     外地注册: 🟢 便捷 → 支持支付宝扫码
+     车辆维护: 🟡 一般 → 评价不一
+   ```
    
-   **提示用户**：无论使用哪种方法，都建议到站后再次确认（打开美团/哈啰/青桔 APP 或当地公共自行车小程序）
+   **置信度规则**:
+   - 高: 两个信源均有提及（交叉验证通过）
+   - 中: 仅一个信源提及
+   - 低: 信源不可用，结果不可靠
+   
+   **特殊案例** (已验证):
+   - **杭州**: 主力是"小红车"（有桩），御三家基本无存在感
+   - **苏州**: 有美团+哈啰，也有政府"苏州好行"
+   
+   **备选方法** (脚本不可用时):
+   - 手动 Exa: `mcporter call 'exa.web_search_exa(query: "城市 共享单车", numResults: 5)'`
+   - 手动小红书: `cd ~/.openclaw/skills/xiaohongshu-skills && uv run python scripts/cli.py search-feeds --keyword "城市 共享单车" --sort-by "最新"`
+   - 高德 API: `python3 scripts/check_bike_realtime.py 城市名` (需 AMAP_API_KEY)
+   **提示用户**: 无论结果如何，建议到站后打开 APP 再次确认
 
 2. **Find Train Routes** 🚂
    - Long-distance: ONLY trains (普快/快车/高铁/动车)
