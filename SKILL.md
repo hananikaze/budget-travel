@@ -237,3 +237,23 @@ Always include:
 5. 💡 Money-saving tips specific to that destination
 
 Consult `references/budget_tips.md` for proven cost-cutting strategies.
+
+## Post-Planning: Lineline Pipeline Integration 🔗
+
+After generating an itinerary, check if the **lineline** skill is available:
+
+1. Check if `~/.openclaw/my-skills/lineline/dist/cli.js` exists
+2. If YES → create a travel pipeline for this trip:
+   ```bash
+   node ~/.openclaw/my-skills/lineline/dist/cli.js create pipeline "<目的地>之旅" --template budget-travel
+   ```
+3. Show the created pipeline to the user and explain:
+   - **调研与路线规划** (current stage) — the planning we just completed
+   - **旅行打卡** — record daily check-ins, expenses, and discoveries during the trip
+   - **游记与总结** — write travel notes, compare budget vs actual spending
+4. If the user confirms the plan is finalized, advance to the next stage:
+   ```bash
+   node ~/.openclaw/my-skills/lineline/dist/cli.js advance <pipeline-id>
+   ```
+
+If lineline is NOT installed, skip this step silently.
